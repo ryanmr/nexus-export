@@ -41,7 +41,7 @@ while($query->have_posts()) { $query->the_post();
   $sequential_cat_id = end($target_category)->sequential_cat_id;
   
   $meta = array('id' => $post->ID);
-  $json_episodes[] = array('id' => $seid, 'name' => $title, 'series_id' => $sequential_cat_id, 'created_at' => $post->post_date, 'updated_at' => $post->post_modified, 'meta' => $meta);
+  $json_episodes[] = array('id' => $seid, 'name' => $title, 'content' => 'content no specified', 'series_id' => $sequential_cat_id, 'created_at' => $post->post_date, 'updated_at' => $post->post_modified, 'meta' => $meta);
 
 }
 
@@ -64,8 +64,25 @@ while($query->have_posts()) { $query->the_post();
   $post = $query->post;
   $sid = $seq_id_er++;
   $episode = Nexus_Episode::factory($post);
-  if ( $episode->has_fringe() ) { $related = Nexus_Episode::factory($episode->get_fringe()); $rep = translate_episode_id($json_episodes, $related->get_id());   $json_episode_relations[] = array('type' => 'fringe', 'episode' => $sid, 'related' => $rep['id']); }  
-  if ( $episode->has_parent() ) { $related = Nexus_Episode::factory($episode->get_parent()); $rep = translate_episode_id($json_episodes, $related->get_id()); $json_episode_relations[] = array('type' => 'parent', 'episode' => $sid, 'related' => $rep['id']); }  
+  if ( $episode->has_fringe() ) { $related = Nexus_Episode::factory($episode->get_fringe()); $rep = translate_episode_id($json_episodes, $related->get_id());   $json_episode_relations[] = array('type' => 'fringe', 'episode_id' => $sid, 'episode_related_id' => $rep['id']); }  
+  if ( $episode->has_parent() ) { $related = Nexus_Episode::factory($episode->get_parent()); $rep = translate_episode_id($json_episodes, $related->get_id()); $json_episode_relations[] = array('type' => 'parent', 'episode_id' => $sid, 'episode_related_id' => $rep['id']); }  
+}
+
+/*
+  Episode Medias - mp3 and data
+*/
+$json_episodes_medias = array();
+$episode_args = array('post_type'=>'episode', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'ID', 'order' => 'ASC');
+$query = new WP_Query($episode_args);
+$seq_id_er = 1;
+while($query->have_posts()) { $query->the_post();
+  $post = $query->post;
+  $sid = $seq_id_er++;
+  $episode = Nexus_Episode::factory($post);
+  if ( $episode->has_enclosure() ) {
+    $enclosure = $episode->get_enclosure();
+    $json_episodes_medias[] = array('type' => 'mp3', 'length' => $enclosure['duration'], 'size' => $enclosure['size'], 'url' => $enclosure['url']);
+  }
 }
 
 /*
@@ -118,6 +135,7 @@ $json_output = array();
 $json_output['series'] = $json_categories;
 $json_output['episodes'] = $json_episodes;
 $json_output['episode_relations'] = $json_episode_relations;
+$json_output['episode_medias'] = $json_episodes_medias;
 $json_output['people'] = $json_people;
 $json_output['people_relations'] = $json_people_relations;
 
