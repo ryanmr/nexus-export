@@ -40,8 +40,10 @@ while($query->have_posts()) { $query->the_post();
 
   $sequential_cat_id = end($target_category)->sequential_cat_id;
   
+  $episode = Nexus_Episode::factory($post->ID);
+
   $meta = array('id' => $post->ID);
-  $json_episodes[] = array('id' => $seid, 'name' => $title, 'content' => 'content no specified', 'series_id' => $sequential_cat_id, 'created_at' => $post->post_date, 'updated_at' => $post->post_modified, 'meta' => $meta);
+  $json_episodes[] = array('id' => $seid, 'name' => $title, 'number' => $episode->get_episode_number(), 'content' => $episode->get_content(), 'description' => $episode->get_excerpt(), 'series_id' => $sequential_cat_id, 'created_at' => $post->post_date, 'updated_at' => $post->post_modified, 'meta' => $meta);
 
 }
 
@@ -81,7 +83,7 @@ while($query->have_posts()) { $query->the_post();
   $episode = Nexus_Episode::factory($post);
   if ( $episode->has_enclosure() ) {
     $enclosure = $episode->get_enclosure();
-    $json_episodes_medias[] = array('type' => 'mp3', 'length' => $enclosure['duration'], 'size' => $enclosure['size'], 'url' => $enclosure['url']);
+    $json_episodes_medias[] = array('type' => 'mp3', 'episode_id' => $sid, 'length' => $enclosure['duration'], 'size' => $enclosure['size'], 'url' => $enclosure['url']);
   }
 }
 
@@ -100,7 +102,7 @@ while($query->have_posts()) { $query->the_post();
   $spid = $sequential_person_id++;
 
   $meta = array('id' => $post->ID);
-  $json_people[] = array('id' => $spid, 'name' => $post->post_title, 'content' => $post->post_content, 'email' => $email, 'meta' => $meta);
+  $json_people[] = array('id' => $spid, 'name' => $post->post_title, 'content' => $post->post_content, 'email' => $email, 'created_at' => $post->post_date, 'updated_at' => $post->post_modified, 'meta' => $meta);
 }
 
 /*
@@ -138,6 +140,21 @@ $json_output['episode_relations'] = $json_episode_relations;
 $json_output['episode_medias'] = $json_episodes_medias;
 $json_output['people'] = $json_people;
 $json_output['people_relations'] = $json_people_relations;
+
+function remove_meta($array) {
+  $output = array_map(function($el){
+    $r = array_map(function($e){
+      if ( array_key_exists('meta', $e) ) {
+        unset($e['meta']);
+      };   
+      return $e;
+    }, $el);
+    return $r;
+  }, $array);
+  return $output;
+}
+
+$json_output = remove_meta($json_output);
 
 echo json_encode($json_output, JSON_PRETTY_PRINT);
 
